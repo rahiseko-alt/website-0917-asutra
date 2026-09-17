@@ -1,0 +1,17 @@
+{
+  "tool": "built-in ImageGen",
+  "prompts": [
+    [
+      "solstice",
+      "A stunning editorial art direction website cover image, landscape 16:10. A monumental amber glass sphere on a circular travertine platform in a warm brutalist architectural gallery, golden sunlight, immersive cinematic photoreal 3D rendering, muted amber and stone. Enormous elegant ivory italic serif word 'Solstice' across upper middle. Tiny header 'OBJECTS / SPACE / LIGHT'. The whole image is a polished premium design project cover, edge to edge, no device mockup, no border. Original demo portfolio artwork, no existing brand."
+    ],
+    [
+      "otherworld",
+      "Create a premium art director portfolio project cover, landscape 16:10. An elegant editorial masonry collage of 12 surreal architectural photographs: pastel pink architecture, blue pool water, moss-covered sculpture, white curved stairs, dreamy rock landscape, tropical courtyard, crystal reflections, a small typographic central pale pink tile with the exact text 'Otherworld' in elegant dark italic serif. Rigorous narrow cream gutters, sophisticated muted sage pink cream cyan palette, photographic detail. No device frame, no existing brands. Full bleed finished visual design artwork."
+    ],
+    [
+      "form",
+      "A highly refined graphic design portfolio website cover, landscape 16:10, white background, huge condensed black typography at upper left exactly 'FORM /\\nFUTURE'. Beneath it a three dimensional fan of upright editorial design posters receding in perspective across the frame, posters in acid green cobalt red silver with experimental modern typography, art photography and abstract geometric compositions. Looks like a real award-winning experimental publishing art-direction project. Tiny typography top right 'SELECTED EXPERIMENTS — 2026'. Precise, editorial, polished. No device frame, no existing logos."
+    ]
+  ]
+}

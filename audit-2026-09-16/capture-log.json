@@ -1,0 +1,118 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "source": "https://jesperlandberg.com/",
+  "prototype": "http://127.0.0.1:4174/",
+  "captures": [
+    {
+      "name": "01-reference-idle",
+      "time": 1789514918847
+    },
+    {
+      "name": "01-demo-idle",
+      "time": 1789514921807
+    },
+    {
+      "name": "02-reference-card-hover",
+      "time": 1789514951958
+    },
+    {
+      "name": "02-demo-card-hover",
+      "time": 1789514956410
+    },
+    {
+      "name": "03-reference-arrow-hover",
+      "time": 1789515029833
+    },
+    {
+      "name": "03-demo-arrow-hover",
+      "time": 1789515034751
+    },
+    {
+      "name": "04-reference-profile",
+      "time": 1789515208196
+    },
+    {
+      "name": "04-demo-profile",
+      "time": 1789515208558
+    },
+    {
+      "name": "05-reference-profile-pointer-right",
+      "time": 1789515223317
+    },
+    {
+      "name": "05-demo-profile-pointer-right",
+      "time": 1789515223950
+    },
+    {
+      "name": "06-reference-project-opening",
+      "time": 1789515304115
+    },
+    {
+      "name": "06-demo-project-opening",
+      "time": 1789515309146
+    },
+    {
+      "name": "07-reference-project-scroll",
+      "time": 1789515342734
+    },
+    {
+      "name": "07-demo-project-scroll",
+      "time": 1789515345035
+    },
+    {
+      "name": "08-reference-project-settled",
+      "time": 1789515353961
+    },
+    {
+      "name": "08-demo-project-settled",
+      "time": 1789515354884
+    },
+    {
+      "name": "08-reference-project-settled",
+      "time": 1789515381583
+    },
+    {
+      "name": "08-demo-project-settled",
+      "time": 1789515382136
+    },
+    {
+      "name": "09-reference-full",
+      "time": 1789515405331
+    },
+    {
+      "name": "09-demo-full",
+      "time": 1789515405674
+    },
+    {
+      "name": "10-reference-full-hover",
+      "time": 1789515415417
+    },
+    {
+      "name": "10-demo-full-hover",
+      "time": 1789515415739
+    },
+    {
+      "name": "11-reference-full-hover-move",
+      "time": 1789515425499
+    },
+    {
+      "name": "12-reference-full-hover-other",
+      "time": 1789515429099
+    },
+    {
+      "name": "13-reference-full-hover-leave",
+      "time": 1789515439033
+    },
+    {
+      "name": "14-reference-gallery-scroll",
+      "time": 1789515455128
+    },
+    {
+      "name": "14-demo-gallery-scroll",
+      "time": 1789515459620
+    }
+  ]
+}

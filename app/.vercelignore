@@ -1,0 +1,7 @@
+node_modules
+dist
+.openai
+worker
+tests
+AGENTS.md
+design-qa.md
