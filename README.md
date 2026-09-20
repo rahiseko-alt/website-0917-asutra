@@ -28,6 +28,8 @@ VercelでこのリポをImportし、**Root Directory を `app`** に設定しま
 VITE_SUBMISSION_TO=学校の提出専用メールアドレス
 ```
 
+このリポの `main` へのpushは、接続済みのVercelプロジェクトを本番更新します。
+
 ローカル確認は次のとおりです。
 
 ```sh
