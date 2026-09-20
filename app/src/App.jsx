@@ -6,7 +6,7 @@ import {ProjectBody} from './ProjectBody';
 import {MobileGallery} from './MobileGallery';
 import {identity,projects} from './content';
 function route(){const hash=location.hash.slice(1),parts=hash.split('/');if(parts.includes('project')){const i=projects.findIndex(p=>p.id===parts.at(-1));return {view:parts[0]==='full'?'full':'featured',panel:i>=0?i:null};}return {view:hash==='full'?'full':'featured',panel:hash==='profile'||hash==='contact'?hash:null};}
-const submissionTo='povoaddress1@gmail.com';
+const submissionTo=import.meta.env.VITE_SUBMISSION_TO || '';
 function SubmissionForm({project}){
  const [studentId,setStudentId]=useState(''),[studentName,setStudentName]=useState(''),[siteUrl,setSiteUrl]=useState('');
  const submit=e=>{e.preventDefault();const subject=`【WEB提出】${project.assignmentId}｜${studentId}｜${studentName}`;const body=`URL: ${siteUrl}\n\nAI利用の記録:\n\n著作権・引用の確認:\n\n個人情報の確認:`;window.location.href=`mailto:${encodeURIComponent(submissionTo)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;};
@@ -15,8 +15,8 @@ function SubmissionForm({project}){
    <label>学籍番号<input value={studentId} onChange={e=>setStudentId(e.target.value)} required placeholder="例 240101" autoComplete="off"/></label>
    <label>氏名<input value={studentName} onChange={e=>setStudentName(e.target.value)} required placeholder="例 名古屋 太郎" autoComplete="name"/></label>
    <label>公開URL<input value={siteUrl} onChange={e=>setSiteUrl(e.target.value)} required type="url" placeholder="https://..." autoComplete="url"/></label>
-   <button className="submit-mail" type="submit">メールを作成する ↗</button>
-   <small>送信前に、AI利用の記録・著作権と引用・個人情報を確認してください。</small>
+   <button className="submit-mail" type="submit" disabled={!submissionTo}>メールを作成する ↗</button>
+   <small>{submissionTo?'送信前に、AI利用の記録・著作権と引用・個人情報を確認してください。':'提出先メールが未設定です。運用担当者は環境変数を設定してください。'}</small>
  </form>;
 }
 export function App(){
