@@ -4,5 +4,7 @@ dist/
 .env
 .env.*
 !.env.example
+ops.local.md
+apps-script/.clasp.json
 __pycache__/
 *.zip

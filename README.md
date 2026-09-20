@@ -49,6 +49,7 @@ npm run dev
 - [仕組み](docs/仕組み.md)
 - [日常運用と障害対応](docs/運用手順.md)
 - [Apps Scriptのセットアップ](apps-script/README.md)
+- [新規セッション・新任担当者への引き継ぎ](docs/引き継ぎ.md)
 
 ## 検証
 
@@ -65,5 +66,7 @@ GitHubに保存しないもの:
 - Google Spreadsheet ID
 - 学校メールの許可ドメイン
 - Apps ScriptのプロジェクトID・OAuth認可情報
+
+新しいClaude Codeセッションにも引き継げるよう、作業規約は [`AGENTS.md`](AGENTS.md)、Claude Code向け入口は [`CLAUDE.md`](CLAUDE.md) に置いています。実運用のアクセス情報は、Git管理外の [`ops.local.example.md`](ops.local.example.md) を複製した `ops.local.md` で管理してください。
 
 提出先メールはブラウザの `mailto:` に使われるため、サイト利用者から見える値です。専用の授業提出アドレスを用意する運用を推奨します。
