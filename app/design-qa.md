@@ -1,6 +1,18 @@
-# Design QA — Jesper reference / personal portfolio demo
+# Design QA — 3D PBL submission desk
 
 final result: passed
+
+## Submission-desk conversion — 2026-09-20
+
+The 3D portfolio visual language remains the selected source of truth: black full-screen gallery, curved image cards, corner navigation, and the white project-sheet detail view. The content and main interaction were converted from a personal portfolio to an AI Business College web-assignment submission desk.
+
+- `LOCAL INSIGHT`, `NAGOYA INBOUND`, and `VENTURE LAB` replace the demo project titles and map to PBL-01 through PBL-03.
+- The project sheet now contains the primary workflow: student ID, student name, and public website URL are required before creating the correctly formatted `mailto:` submission (`【WEB提出】課題ID｜学籍番号｜氏名`).
+- The form prepares the email only; it does not send mail automatically. The established Gmail-to-Sheets monitor remains the receiving workflow.
+- Captured and inspected in the in-app browser: featured gallery and `#featured/project/local-insight` detail state at desktop size. The submission panel, labels, required fields, and primary mail action are visible and readable.
+- `npm run build` passed; `npm run test:sites` passed 4/4 after the conversion.
+
+No P0/P1/P2 visual or interaction defect was found in the inspected desktop submission flow.
 
 Scope: reference-led local prototype with the user's explicitly requested generated demo imagery. This is not a pixel-identical reproduction, nor a claim of reproducing the original author's source code. Reference imagery, personal identity, awards, and business claims were replaced with fictional demo content.
 

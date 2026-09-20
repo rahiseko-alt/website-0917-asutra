@@ -6,9 +6,22 @@ import {ProjectBody} from './ProjectBody';
 import {MobileGallery} from './MobileGallery';
 import {identity,projects} from './content';
 function route(){const hash=location.hash.slice(1),parts=hash.split('/');if(parts.includes('project')){const i=projects.findIndex(p=>p.id===parts.at(-1));return {view:parts[0]==='full'?'full':'featured',panel:i>=0?i:null};}return {view:hash==='full'?'full':'featured',panel:hash==='profile'||hash==='contact'?hash:null};}
+const submissionTo='povoaddress1@gmail.com';
+function SubmissionForm({project}){
+ const [studentId,setStudentId]=useState(''),[studentName,setStudentName]=useState(''),[siteUrl,setSiteUrl]=useState('');
+ const submit=e=>{e.preventDefault();const subject=`【WEB提出】${project.assignmentId}｜${studentId}｜${studentName}`;const body=`URL: ${siteUrl}\n\nAI利用の記録:\n\n著作権・引用の確認:\n\n個人情報の確認:`;window.location.href=`mailto:${encodeURIComponent(submissionTo)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;};
+ return <form className="submission-form" onSubmit={submit}>
+   <strong>SUBMIT THIS TASK</strong><span>{project.assignmentId} / 送信先: 学校指定メール</span>
+   <label>学籍番号<input value={studentId} onChange={e=>setStudentId(e.target.value)} required placeholder="例 240101" autoComplete="off"/></label>
+   <label>氏名<input value={studentName} onChange={e=>setStudentName(e.target.value)} required placeholder="例 名古屋 太郎" autoComplete="name"/></label>
+   <label>公開URL<input value={siteUrl} onChange={e=>setSiteUrl(e.target.value)} required type="url" placeholder="https://..." autoComplete="url"/></label>
+   <button className="submit-mail" type="submit">メールを作成する ↗</button>
+   <small>送信前に、AI利用の記録・著作権と引用・個人情報を確認してください。</small>
+ </form>;
+}
 export function App(){
  const [state,setState]=useState(route),[small,setSmall]=useState(()=>innerWidth<700),[reduced,setReduced]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);const dialog=useRef(null),lastFocus=useRef(null),[sent,setSent]=useState(false);
- useEffect(()=>{const change=()=>setState(previous=>{const next=route();return next.panel!==null?{...next,view:previous.view}:next;});window.addEventListener('hashchange',change);const mq=matchMedia('(max-width: 699px)'),rm=matchMedia('(prefers-reduced-motion: reduce)');const resize=()=>setSmall(mq.matches),reduce=()=>setReduced(rm.matches);mq.addEventListener('change',resize);rm.addEventListener('change',reduce);document.title=identity.name+' — Portfolio';return()=>{window.removeEventListener('hashchange',change);mq.removeEventListener('change',resize);rm.removeEventListener('change',reduce);};},[]);
+ useEffect(()=>{const change=()=>setState(previous=>{const next=route();return next.panel!==null?{...next,view:previous.view}:next;});window.addEventListener('hashchange',change);const mq=matchMedia('(max-width: 699px)'),rm=matchMedia('(prefers-reduced-motion: reduce)');const resize=()=>setSmall(mq.matches),reduce=()=>setReduced(rm.matches);mq.addEventListener('change',resize);rm.addEventListener('change',reduce);document.title='WEBサイト課題の提出サイト';return()=>{window.removeEventListener('hashchange',change);mq.removeEventListener('change',resize);rm.removeEventListener('change',reduce);};},[]);
  const open=useCallback((i,originBox)=>{
   const source=state.view==='full'?document.querySelector('.index-preview'):document.querySelector(`.canvas-project:not([hidden])[aria-label="${projects[i].title} — 作品を見る"]`);
   const box=originBox||source?.getBoundingClientRect(),style=document.documentElement.style;
@@ -23,17 +36,17 @@ export function App(){
  const project=typeof state.panel==='number'?projects[state.panel]:null;
  return <>
   <div className={'portfolio '+(state.panel!==null?'is-open':'')} inert={state.panel!==null?true:undefined}>
-   <header><a className="name" href="#featured">{identity.name}</a><button onClick={()=>location.hash='profile'}>PROFILE</button></header>
+   <header><a className="name" href="#featured">{identity.name}</a><button onClick={()=>location.hash='profile'}>GUIDE</button></header>
    {state.view==='featured'?(small||reduced?<MobileGallery onOpen={open} paused={state.panel!==null} reduced={reduced}/>:<Gallery onOpen={open} paused={state.panel!==null}/>):<FullIndex onOpen={open}/>}
-   <footer><nav aria-label="表示切替"><a href="#featured" aria-current={state.view==='featured'?'page':undefined}>FEATURED</a><span>/</span><a href="#full" aria-current={state.view==='full'?'page':undefined}>FULL</a></nav><span className="demo-note">DEMO / 2026</span><button onClick={()=>location.hash='contact'}>CONTACT</button></footer>
+   <footer><nav aria-label="表示切替"><a href="#featured" aria-current={state.view==='featured'?'page':undefined}>PBL TASKS</a><span>/</span><a href="#full" aria-current={state.view==='full'?'page':undefined}>FULL INDEX</a></nav><span className="demo-note">WEB SUBMISSION / 2026</span><button onClick={()=>location.hash='contact'}>SUBMIT</button></footer>
   </div>
   {state.panel!==null&&<div className={'overlay '+(project?'project-overlay':'portal-overlay')} ref={dialog} role="dialog" aria-modal="true" aria-label={project?project.title:state.panel==='profile'?'プロフィール':'お問い合わせ'}>
    {project?<><button className="close-detail" onClick={close} aria-label="閉じる">×</button><article className="project-sheet" key={project.id}>
 
-    <div className="project-info"><h1>{project.title}</h1><p>{project.description}</p><div className="project-meta"><span>{project.year}</span><span>CONCEPT PROJECT</span></div><small>{project.category}</small><p className="demo-disclosure">自主制作のデモ作品</p></div>
+    <div className="project-info"><h1>{project.title}</h1><p>{project.description}</p><div className="project-meta"><span>{project.assignmentId}</span><span>{project.year}</span></div><small>{project.category}</small><SubmissionForm project={project}/></div>
     <ProjectBody project={project}><div className="next-project"><button onClick={()=>open((state.panel+projects.length-1)%projects.length)}>← Previous</button><button onClick={()=>open((state.panel+1)%projects.length)}>Next project ↗</button></div></ProjectBody>
    </article></>:<><button className="close-portal" onClick={close} aria-label="閉じる">CLOSE</button><Portal/><div className="portal-content">
-    {state.panel==='profile'?<><h1>{identity.name}</h1><p className="profile-intro">{identity.intro}</p><p className="profile-note">{identity.title}<br/>{identity.note}</p><button className="inline-link" onClick={()=>location.hash='contact'}>LET’S TALK ↗</button></>:<><h1>Let’s make<br/>something matter.</h1><p>新しいアイデアは、ひとつの会話から。</p>{identity.email?<a className="contact-email" href={'mailto:'+identity.email}>{identity.email} ↗</a>:<form onSubmit={e=>{e.preventDefault();setSent(true);}}><label htmlFor="email">YOUR EMAIL</label><div className="email-field"><input id="email" type="email" placeholder="you@example.com" required autoComplete="email"/><button type="submit" aria-label="デモを確認">↗</button></div><p className="form-note" role="status">{sent?'デモを確認しました。メールは送信されていません。':'デモフォームです。外部への送信は行いません。'}</p></form>}</>}
+    {state.panel==='profile'?<><h1>WEB課題<br/>提出デスク</h1><p className="profile-intro">{identity.intro}</p><p className="profile-note">{identity.title}<br/>{identity.note}</p><button className="inline-link" onClick={()=>location.hash='contact'}>提出方法を見る ↗</button></>:<><h1>課題を選択して<br/>提出する。</h1><p>カードを開き、学籍番号・氏名・公開URLを入力すると、授業用の提出メールが作成されます。</p><button className="inline-link" onClick={()=>location.hash='featured'}>PBL TASKSへ ↗</button></>}
    </div></>}
   </div>}
  </>;

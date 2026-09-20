@@ -1,13 +1,12 @@
-// Personalise here. These are original, fictional demo projects, not client work.
 export const identity = {
-  name: 'YOUR NAME', title: 'Independent creator',
-  intro: 'アイデアを、心に残る体験へ。デザインとテクノロジーを行き来しながら、新しい表現の可能性を探っています。',
-  note: 'SELECTED EXPERIMENTS — DEMO PORTFOLIO', email: '',
+  name: 'AI BUSINESS COLLEGE', title: 'WEBサイト課題の提出デスク',
+  intro: 'AIで読み、提案し、伝える。授業で制作したWEBサイトと提案資料を、課題ごとの提出画面から送信してください。',
+  note: 'PBL SUBMISSION DESK — NAGOYA', email: '',
 };
 export const projects = [
-  {id:'otherworld',detailImage:'./assets/otherworld-detail.png',title:'Otherworld',category:'ART DIRECTION / VISUAL EXPLORATION',year:'2026',image:'./assets/otherworld.png',description:'現実と想像のあいだにある風景。建築、自然、光をひとつのビジュアルコレクションへ。',detail:'パステルカラーと静かな光を手がかりに、異なる空間を一つの視覚言語でつなぐ、架空のアートディレクション・スタディ。',color:'#e4c4c9'},
-  {id:'solstice',detailImage:'./assets/solstice-detail.png',title:'Solstice',category:'SPATIAL DESIGN / DIGITAL EXPERIENCE',year:'2026',image:'./assets/solstice.png',description:'光がかたちを変え、空間に時間が流れる。素材と陰影を主役にした、デジタルの展示空間。',detail:'アンバーガラス、石、光の関係を探る架空の空間デザイン。大きなタイポグラフィと没入感のあるイメージで、作品そのものに視線を集めます。',color:'#e9cfaa'},
-  {id:'form',detailImage:'./assets/form-detail.png',title:'Form / Future',category:'GRAPHIC DESIGN / EXPERIMENTAL PUBLISHING',year:'2026',image:'./assets/form.png',description:'文字とイメージに、新しい秩序を。グラフィックの実験を集めた、動くビジュアルアーカイブ。',detail:'印刷物の重なりを空間的なインターフェースとしてとらえた架空のエディトリアル・プロジェクト。色、サイズ、奥行きの対比でリズムを生み出します。',color:'#eeeeea'},
+  {id:'local-insight',assignmentId:'PBL-01',detailImage:'./assets/otherworld-detail.png',title:'LOCAL INSIGHT',category:'地域の飲食店の顧客分析と集客提案',year:'WEB + PDF',image:'./assets/otherworld.png',description:'地域の飲食店を対象に、顧客データを読み解き、AIを活用した実現可能な集客提案をつくる。',detail:'課題の背景、根拠となるデータ、AIを使った分析・判断をWEBサイト上で明確に伝えてください。',color:'#e4c4c9'},
+  {id:'nagoya-inbound',assignmentId:'PBL-02',detailImage:'./assets/solstice-detail.png',title:'NAGOYA INBOUND',category:'インバウンド向け観光プロモーション提案',year:'WEB + PDF',image:'./assets/solstice.png',description:'海外からの来訪者に向け、名古屋の価値を多言語で伝えるプロモーションを設計する。',detail:'ターゲット、提供価値、発信手段を整理し、AI利用の記録と情報源を示した提案にしてください。',color:'#e9cfaa'},
+  {id:'venture-lab',assignmentId:'PBL-03',detailImage:'./assets/form-detail.png',title:'VENTURE LAB',category:'AIを活用した市場調査と新規事業提案',year:'WEB + PDF',image:'./assets/form.png',description:'市場の変化をAIで分析し、社会や企業にとって意味のある新しい事業を提案する。',detail:'結論だけでなく、調査方法、出典、AIとの対話を通じた判断の過程を成果物として残してください。',color:'#eeeeea'},
 ];
 
 
