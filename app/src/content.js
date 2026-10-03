@@ -10,3 +10,8 @@ export const projects = [
 ];
 
 
+export const siteLinks = [
+  {title:'MOJI',url:'https://rahiseko-alt.github.io/moji/'},
+  {title:'4AISCHOOL SHIFT',url:'https://script.google.com/macros/s/AKfycbzloK9Wgxf_aQnaXZ2k_MOz-VbQK7HFhUXQVTS0VH2Ug6T2wd5-Eoq0fgebtq0nQ-HR/exec'},
+  {title:'KANJI NINSIKI',url:'https://rahiseko-alt.github.io/Kanji-ninsiki/'},
+];

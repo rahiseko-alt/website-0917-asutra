@@ -4,7 +4,7 @@ import {Gallery,Portal} from './GalleryV2';
 import {FullIndex} from './FullIndex';
 import {ProjectBody} from './ProjectBody';
 import {MobileGallery} from './MobileGallery';
-import {identity,projects} from './content';
+import {identity,projects,siteLinks} from './content';
 function route(){const hash=location.hash.slice(1),parts=hash.split('/');if(parts.includes('project')){const i=projects.findIndex(p=>p.id===parts.at(-1));return {view:parts[0]==='full'?'full':'featured',panel:i>=0?i:null};}return {view:hash==='full'?'full':'featured',panel:hash==='profile'||hash==='contact'?hash:null};}
 const submissionTo=import.meta.env.VITE_SUBMISSION_TO || '';
 function SubmissionForm({project}){
@@ -46,7 +46,7 @@ export function App(){
     <div className="project-info"><h1>{project.title}</h1><p>{project.description}</p><div className="project-meta"><span>{project.assignmentId}</span><span>{project.year}</span></div><small>{project.category}</small><SubmissionForm project={project}/></div>
     <ProjectBody project={project}><div className="next-project"><button onClick={()=>open((state.panel+projects.length-1)%projects.length)}>← Previous</button><button onClick={()=>open((state.panel+1)%projects.length)}>Next project ↗</button></div></ProjectBody>
    </article></>:<><button className="close-portal" onClick={close} aria-label="閉じる">CLOSE</button><Portal/><div className="portal-content">
-    {state.panel==='profile'?<><h1>WEB課題<br/>提出デスク</h1><p className="profile-intro">{identity.intro}</p><p className="profile-note">{identity.title}<br/>{identity.note}</p><button className="inline-link" onClick={()=>location.hash='contact'}>提出方法を見る ↗</button></>:<><h1>課題を選択して<br/>提出する。</h1><p>カードを開き、学籍番号・氏名・公開URLを入力すると、授業用の提出メールが作成されます。</p><button className="inline-link" onClick={()=>location.hash='featured'}>PBL TASKSへ ↗</button></>}
+    {state.panel==='profile'?<><h1>WEB課題<br/>提出デスク</h1><p className="profile-intro">{identity.intro}</p><p className="profile-note">{identity.title}<br/>{identity.note}</p><ul className="site-links" aria-label="公開サイト">{siteLinks.map(l=><li key={l.url}><a href={l.url} target="_blank" rel="noopener noreferrer">{l.title} ↗</a></li>)}</ul><button className="inline-link" onClick={()=>location.hash='contact'}>提出方法を見る ↗</button></>:<><h1>課題を選択して<br/>提出する。</h1><p>カードを開き、学籍番号・氏名・公開URLを入力すると、授業用の提出メールが作成されます。</p><button className="inline-link" onClick={()=>location.hash='featured'}>PBL TASKSへ ↗</button></>}
    </div></>}
   </div>}
  </>;
