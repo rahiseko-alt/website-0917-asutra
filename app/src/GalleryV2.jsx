@@ -7,7 +7,7 @@ import {projects} from './content';
 // A fixed lens-shaped field: opposite edges expand/contract rather than
 // translating together. CPU hit regions and the floor use the same field.
 function surface(x,y,z=0,speed=0){
- const phase=(x+1.4)*.62,wave=Math.cos(phase),s=Math.max(-2,Math.min(2,speed));
+ const phase=x*.62,wave=Math.cos(phase),s=Math.max(-2,Math.min(2,speed));
  return [x+.25*Math.sin(phase),y*(.995+.185*wave+.045*Math.abs(s)*wave)+.08*(1-wave)+s*.035*Math.sin(phase),z+.12+.18*wave];
 }
 function floorPoint(x,y,z){
@@ -20,7 +20,7 @@ const surfaceGLSL=`
 uniform float speed, hoverAmount, pulseAge;
 uniform vec2 pulseOrigin, touchPoint, flow;
 vec3 cardSurface(vec3 basePoint, vec2 uv){
- float phase=(basePoint.x+1.4)*.62,wave=cos(phase),s=clamp(speed,-2.,2.);
+ float phase=basePoint.x*.62,wave=cos(phase),s=clamp(speed,-2.,2.);
  vec3 p=vec3(basePoint.x+.25*sin(phase),basePoint.y*(.995+.185*wave+.045*abs(s)*wave)+.08*(1.-wave)+s*.035*sin(phase),basePoint.z+.12+.18*wave);
  vec2 q=uv*2.-1.;
  float envelope=max(0.,(1.-q.x*q.x)*(1.-q.y*q.y));
@@ -78,7 +78,7 @@ void main(){
  float diffuse=.55+.45*max(dot(n,light),0.);
  float spot=spotCone(p)*lightIntensity;
  float sheen=pow(max(dot(n,normalize(light+v)),0.),48.)*spot;
- float depth=.5-.5*cos((vFlat.x+1.4)*.62);
+ float depth=.5-.5*cos(vFlat.x*.62);
  vec2 localDelta=(vUv-touchPoint)*vec2(1.7,1.);
  float influence=exp(-dot(localDelta,localDelta)*18.);
  float edgeFade=sin(vUv.x*3.14159265)*sin(vUv.y*3.14159265);
@@ -105,8 +105,8 @@ export function Gallery({onOpen,paused}){
  useEffect(()=>{
   const el=host.current;let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:true});}catch{setFailed(true);return;}
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0);el.prepend(renderer.domElement);
-  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(.6,.04,12);
-  const lightBase=new THREE.Vector3(-.4,5.2,8.6),spotUniforms={lightPos:{value:lightBase.clone()},lightTarget:{value:new THREE.Vector3(0,0,.24)},lightIntensity:{value:1}};
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(0,.04,12);
+  const lightBase=new THREE.Vector3(0,5.2,8.6),spotUniforms={lightPos:{value:lightBase.clone()},lightTarget:{value:new THREE.Vector3(0,0,.3)},lightIntensity:{value:1}};
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,gap=5.78,width=5.65,height=3.33,total=gap*projects.length,geo=new THREE.PlaneGeometry(width,height,96,48),cards=[];
   let frame,stopped=false,current=gap,target=gap,down=false,lastX=0,startX=0,distance=0,lastAction=0,previous=0,hover=-1,pendingOpen=null;
   [...projects,...projects].forEach((p,j)=>{const i=j%projects.length,copy=Math.floor(j/projects.length);
