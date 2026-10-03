@@ -1,14 +1,13 @@
 import {useEffect,useRef,useState} from 'react';
-import {gsap} from 'gsap';
 import * as THREE from 'three';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {projects} from './content';
 
 // A fixed lens-shaped field: opposite edges expand/contract rather than
 // translating together. CPU hit regions and the floor use the same field.
-function surface(x,y,z=0,speed=0){
- const phase=x*.62,wave=Math.cos(phase),s=Math.max(-2,Math.min(2,speed));
- return [x+.25*Math.sin(phase),y*(.995+.185*wave+.045*Math.abs(s)*wave)+.08*(1-wave)+s*.035*Math.sin(phase),z+.12+.18*wave];
+function surface(x,y,z=0){
+ const phase=x*.62,wave=Math.cos(phase);
+ return [x+.25*Math.sin(phase),y*(.995+.185*wave)+.08*(1-wave),z+.12+.18*wave];
 }
 function floorPoint(x,y,z){
  const p=surface(x,y,z),falloff=Math.exp(-Math.max(0,z)*.55);
@@ -17,24 +16,9 @@ function floorPoint(x,y,z){
 // Shared continuous surface: lighting samples the same shape as the geometry.
 // The interaction envelope is zero at all four edges, preserving hit regions.
 const surfaceGLSL=`
-uniform float speed, hoverAmount, pulseAge;
-uniform vec2 pulseOrigin, touchPoint, flow;
 vec3 cardSurface(vec3 basePoint, vec2 uv){
- float phase=basePoint.x*.62,wave=cos(phase),s=clamp(speed,-2.,2.);
- vec3 p=vec3(basePoint.x+.25*sin(phase),basePoint.y*(.995+.185*wave+.045*abs(s)*wave)+.08*(1.-wave)+s*.035*sin(phase),basePoint.z+.12+.18*wave);
- vec2 q=uv*2.-1.;
- float envelope=max(0.,(1.-q.x*q.x)*(1.-q.y*q.y));
- vec2 touchDelta=(uv-touchPoint)*vec2(5.65,3.33);
- float touchFalloff=exp(-dot(touchDelta,touchDelta)*1.7);
- p.z-=hoverAmount*(.12+.24*touchFalloff)*envelope;
- p.xy+=flow*envelope*touchFalloff*.34;
- if(pulseAge>=0. && pulseAge<1.25){
-  float r=length((uv-pulseOrigin)*vec2(5.65,3.33));
-  float front=r-pulseAge*6.5;
-  float ring=sin(front*8.)*exp(-front*front*3.5);
-  p.z+=ring*.13*exp(-pulseAge*2.6)*smoothstep(0.,.045,pulseAge)*envelope;
- }
- return p;
+ float phase=basePoint.x*.62,wave=cos(phase);
+ return vec3(basePoint.x+.25*sin(phase),basePoint.y*(.995+.185*wave)+.08*(1.-wave),basePoint.z+.12+.18*wave);
 }`;
 // One spotlight shared by cards and floor: the aim point is fixed at the
 // centre of the stage while the source drifts, so the pool breathes in place.
@@ -79,12 +63,7 @@ void main(){
  float spot=spotCone(p)*lightIntensity;
  float sheen=pow(max(dot(n,normalize(light+v)),0.),48.)*spot;
  float depth=.5-.5*cos(vFlat.x*.62);
- vec2 localDelta=(vUv-touchPoint)*vec2(1.7,1.);
- float influence=exp(-dot(localDelta,localDelta)*18.);
- float edgeFade=sin(vUv.x*3.14159265)*sin(vUv.y*3.14159265);
- // Keep the caption stable while the artwork follows the pointer's wake.
- vec2 sampleUV=clamp(vUv-flow*.023*influence*edgeFade*smoothstep(.10,.28,vUv.y),.001,.999);
- vec3 color=texture2D(map,sampleUV).rgb;
+ vec3 color=texture2D(map,vUv).rgb;
  color*=.004+spot*diffuse;
  color=mix(color,vec3(.006),.30*depth);
  color+=vec3(.19)*sheen;
@@ -101,46 +80,35 @@ function paint(ctx,img,detail,p,time,hover){
  ctx.font='500 26px Inter Variable, Arial';ctx.fillStyle='#fff';ctx.fillText(p.title,27,h-29);ctx.beginPath();ctx.arc(w-39,h-37,20,0,Math.PI*2);ctx.fillStyle=hover?'#fff':'#080808';ctx.fill();ctx.font='22px Arial';ctx.textAlign='center';ctx.fillStyle=hover?'#111':'#fff';ctx.fillText('↗',w-39,h-30);ctx.textAlign='left';
 }
 export function Gallery({onOpen,paused}){
- const host=useRef(null),status=useRef({paused}),[failed,setFailed]=useState(false);status.current.paused=paused;
+ const host=useRef(null),step=useRef(null),status=useRef({paused}),[failed,setFailed]=useState(false);status.current.paused=paused;
  useEffect(()=>{
   const el=host.current;let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:true});}catch{setFailed(true);return;}
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0);el.prepend(renderer.domElement);
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(0,.04,12);
   const lightBase=new THREE.Vector3(0,5.2,8.6),spotUniforms={lightPos:{value:lightBase.clone()},lightTarget:{value:new THREE.Vector3(0,0,.3)},lightIntensity:{value:1}};
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,gap=5.78,width=5.65,height=3.33,total=gap*projects.length,geo=new THREE.PlaneGeometry(width,height,96,48),cards=[];
-  let frame,stopped=false,current=gap,target=gap,down=false,lastX=0,startX=0,distance=0,lastAction=0,previous=0,hover=-1,pendingOpen=null;
+  let frame,stopped=false,current=gap,target=gap,down=false,lastX=0,startX=0,distance=0,lastAction=0,previous=0,hover=-1;
   [...projects,...projects].forEach((p,j)=>{const i=j%projects.length,copy=Math.floor(j/projects.length);
    const canvas=document.createElement('canvas');canvas.width=1120;canvas.height=660;const ctx=canvas.getContext('2d'),img=new Image();img.src=p.image;const detail=new Image();detail.src=p.detailImage||p.image;
    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-   const material=new THREE.ShaderMaterial({uniforms:{map:{value:texture},speed:{value:0},hoverAmount:{value:0},pulseAge:{value:-1},pulseOrigin:{value:new THREE.Vector2(.5,.5)},touchPoint:{value:new THREE.Vector2(.5,.5)},flow:{value:new THREE.Vector2()},...spotUniforms},vertexShader:vertex,fragmentShader:fragment,side:THREE.DoubleSide}),mesh=new THREE.Mesh(geo,material);scene.add(mesh);
-   const button=document.createElement('button');button.className='canvas-project';button.setAttribute('aria-label',p.title+' — 作品を見る');button.addEventListener('click',e=>{if((e.detail===0||distance<7)&&!status.current.paused){if(pendingOpen)return;const box=button.getBoundingClientRect();if(e.detail===0||reduced){onOpen(i,box);return;}material.uniforms.pulseOrigin.value.set(Math.max(0,Math.min(1,(e.clientX-box.left)/box.width)),Math.max(0,Math.min(1,1-(e.clientY-box.top)/box.height)));material.uniforms.pulseAge.value=0;
-     gsap.killTweensOf(material.uniforms.pulseAge);
-     gsap.to(material.uniforms.pulseAge,{value:1.25,duration:1.25,ease:'none'});
-     pendingOpen=gsap.delayedCall(.32,()=>{pendingOpen=null;if(!stopped&&!status.current.paused)onOpen(i,box);});}});button.addEventListener('pointerenter',()=>{hover=i;gsap.to(material.uniforms.hoverAmount,{value:1,duration:.45,ease:'power3.out',overwrite:true});});button.addEventListener('pointerleave',()=>{hover=-1;gsap.to(material.uniforms.hoverAmount,{value:0,duration:.65,ease:'power2.out',overwrite:true});});
-   let lastTouch=null;
-   button.addEventListener('pointermove',e=>{
-    if(status.current.paused||e.pointerType==='touch')return;
-    const box=button.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-box.left)/box.width)),y=Math.max(0,Math.min(1,1-(e.clientY-box.top)/box.height));
-    const now=performance.now(),dt=Math.max(16,now-(lastTouch?.time||now));
-    if(lastTouch&&now-lastTouch.time<150){const vx=Math.max(-1,Math.min(1,(x-lastTouch.x)*1000/dt)),vy=Math.max(-1,Math.min(1,(y-lastTouch.y)*1000/dt));
-     gsap.to(material.uniforms.flow.value,{x:vx,y:vy,duration:.16,ease:'power2.out',overwrite:true,onComplete:()=>gsap.to(material.uniforms.flow.value,{x:0,y:0,duration:.7,ease:'power3.out',overwrite:true})});}
-    gsap.to(material.uniforms.touchPoint.value,{x,y,duration:.25,ease:'power3.out',overwrite:true});lastTouch={x,y,time:now};
-   });button.addEventListener('focus',()=>{if(!down){target=current+(((i*gap-current+total/2)%total+total)%total-total/2);lastAction=performance.now();}});el.append(button);cards.push({mesh,button,texture,ctx,img,detail,p,i,copy,lastPaint:-100,lastHover:false});
+   const material=new THREE.ShaderMaterial({uniforms:{map:{value:texture},...spotUniforms},vertexShader:vertex,fragmentShader:fragment,side:THREE.DoubleSide}),mesh=new THREE.Mesh(geo,material);scene.add(mesh);
+   const button=document.createElement('button');button.className='canvas-project';button.setAttribute('aria-label',p.title+' — 作品を見る');button.addEventListener('click',e=>{if((e.detail===0||distance<7)&&!status.current.paused)onOpen(i,button.getBoundingClientRect());});button.addEventListener('pointerenter',()=>{hover=i;});button.addEventListener('pointerleave',()=>{hover=-1;});
+   button.addEventListener('focus',()=>{if(!down){target=current+(((i*gap-current+total/2)%total+total)%total-total/2);lastAction=performance.now();}});el.append(button);cards.push({mesh,button,texture,ctx,img,detail,p,i,copy,lastPaint:-100,lastHover:false});
   });
   const pts=[];for(let a=-30;a<=30;a+=1)for(let z=10;z>-50;z-=.6)pts.push(...floorPoint(a,-height/2,z),...floorPoint(a,-height/2,z-.6));
   for(let z=10;z>-50;z-=1)for(let x=-30;x<30;x+=.25)pts.push(...floorPoint(x,-height/2,z),...floorPoint(x+.25,-height/2,z));
   const gridGeo=new THREE.BufferGeometry();gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));const gridMat=new THREE.ShaderMaterial({uniforms:spotUniforms,vertexShader:floorVertex,fragmentShader:floorFragment});scene.add(new THREE.LineSegments(gridGeo,gridMat));
   const resize=()=>{renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();};resize();const observer=new ResizeObserver(resize);observer.observe(el);
-  const cancelOpen=()=>{pendingOpen?.kill();pendingOpen=null;};
-  const wheel=e=>{if(status.current.paused)return;cancelOpen();e.preventDefault();target-=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)*.0045;lastAction=performance.now();};
-  const pointerdown=e=>{if(status.current.paused||e.button!==0)return;cancelOpen();down=true;startX=lastX=e.clientX;distance=0;el.classList.add('dragging');};const move=e=>{if(!down)return;target-=(e.clientX-lastX)*.016;lastX=e.clientX;distance=Math.abs(e.clientX-startX);lastAction=performance.now();};const up=()=>{down=false;el.classList.remove('dragging');};
-  const key=e=>{if(e.key==='Escape')cancelOpen();if(status.current.paused||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();target+=(e.key==='ArrowRight'?1:-1)*gap;lastAction=performance.now();};el.addEventListener('wheel',wheel,{passive:false});el.addEventListener('pointerdown',pointerdown);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('keydown',key);
+  step.current=dir=>{if(status.current.paused)return;target=Math.round(target/gap)*gap+dir*gap;lastAction=performance.now();};
+  const wheel=e=>{if(status.current.paused)return;e.preventDefault();target-=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)*.0045;lastAction=performance.now();};
+  const pointerdown=e=>{if(status.current.paused||e.button!==0)return;down=true;startX=lastX=e.clientX;distance=0;el.classList.add('dragging');};const move=e=>{if(!down)return;target-=(e.clientX-lastX)*.016;lastX=e.clientX;distance=Math.abs(e.clientX-startX);lastAction=performance.now();};const up=()=>{down=false;el.classList.remove('dragging');};
+  const key=e=>{if(status.current.paused||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();target+=(e.key==='ArrowRight'?1:-1)*gap;lastAction=performance.now();};el.addEventListener('wheel',wheel,{passive:false});el.addEventListener('pointerdown',pointerdown);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('keydown',key);
   const pos=new THREE.Vector3();const tick=time=>{if(stopped)return;frame=requestAnimationFrame(tick);const dt=Math.min((time-previous)/1000||.016,.05);previous=time;if(document.hidden)return;const speed=target-current;current+=speed*(reduced?1:1-Math.exp(-8*dt));
    if(!reduced){const t=time/1000*.16;spotUniforms.lightPos.value.set(lightBase.x+drift(t,1.3)*1.6,lightBase.y+drift(t,5.9)*.7,lightBase.z+drift(t,9.4)*.5);spotUniforms.lightIntensity.value=1+drift(t*1.7,13.2)*.07;}
-   for(const c of cards){let x=((c.i*gap-current+total/2)%total+total)%total-total/2;if(c.copy)x+=x<0?total:-total;c.mesh.visible=Math.abs(x)<camera.aspect*3.8+width;c.button.hidden=!c.mesh.visible;if(!c.mesh.visible){c.button.style.display="none";continue;}c.mesh.position.x=x;c.mesh.rotation.y=0;c.mesh.material.uniforms.speed.value=reduced?0:Math.max(-2,Math.min(2,speed));const u=c.mesh.material.uniforms;if(time-c.lastPaint>40||c.lastHover!==(hover===c.i)){paint(c.ctx,c.img,c.detail,c.p,reduced?0:time/1000+c.i*3.7,hover===c.i);c.texture.needsUpdate=true;c.lastPaint=time;c.lastHover=hover===c.i;}const outline=[];for(let k=0;k<=16;k++){pos.set(...surface(x-width/2+width*k/16,height/2,0,reduced?0:speed)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}for(let k=16;k>=0;k--){pos.set(...surface(x-width/2+width*k/16,-height/2,0,reduced?0:speed)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}const left=Math.min(...outline.map(p=>p[0])),top=Math.min(...outline.map(p=>p[1])),pw=Math.max(...outline.map(p=>p[0]))-left,ph=Math.max(...outline.map(p=>p[1]))-top;c.button.style.cssText=`width:${pw}px;height:${ph}px;transform:translate3d(${left}px,${top}px,0);clip-path:polygon(${outline.map(p=>`${(p[0]-left)/pw*100}% ${(p[1]-top)/ph*100}%`).join(",")})`;c.button.tabIndex=Math.abs(x)<gap*.6?0:-1;}renderer.render(scene,camera);};frame=requestAnimationFrame(tick);
-  return()=>{stopped=true;cancelOpen();cancelAnimationFrame(frame);observer.disconnect();el.removeEventListener('wheel',wheel);el.removeEventListener('pointerdown',pointerdown);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',key);cards.forEach(c=>{const u=c.mesh.material.uniforms;[u.hoverAmount,u.pulseAge,u.touchPoint.value,u.flow.value].forEach(v=>gsap.killTweensOf(v));c.button.remove();c.texture.dispose();c.mesh.material.dispose();});geo.dispose();gridGeo.dispose();gridMat.dispose();renderer.dispose();renderer.domElement.remove();};
+   for(const c of cards){let x=((c.i*gap-current+total/2)%total+total)%total-total/2;if(c.copy)x+=x<0?total:-total;c.mesh.visible=Math.abs(x)<camera.aspect*3.8+width;c.button.hidden=!c.mesh.visible;if(!c.mesh.visible){c.button.style.display="none";continue;}c.mesh.position.x=x;c.mesh.rotation.y=0;if(time-c.lastPaint>40||c.lastHover!==(hover===c.i)){paint(c.ctx,c.img,c.detail,c.p,reduced?0:time/1000+c.i*3.7,hover===c.i);c.texture.needsUpdate=true;c.lastPaint=time;c.lastHover=hover===c.i;}const outline=[];for(let k=0;k<=16;k++){pos.set(...surface(x-width/2+width*k/16,height/2,0)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}for(let k=16;k>=0;k--){pos.set(...surface(x-width/2+width*k/16,-height/2,0)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}const left=Math.min(...outline.map(p=>p[0])),top=Math.min(...outline.map(p=>p[1])),pw=Math.max(...outline.map(p=>p[0]))-left,ph=Math.max(...outline.map(p=>p[1]))-top;c.button.style.cssText=`width:${pw}px;height:${ph}px;transform:translate3d(${left}px,${top}px,0);clip-path:polygon(${outline.map(p=>`${(p[0]-left)/pw*100}% ${(p[1]-top)/ph*100}%`).join(",")})`;c.button.tabIndex=Math.abs(x)<gap*.6?0:-1;}renderer.render(scene,camera);};frame=requestAnimationFrame(tick);
+  return()=>{stopped=true;cancelAnimationFrame(frame);observer.disconnect();el.removeEventListener('wheel',wheel);el.removeEventListener('pointerdown',pointerdown);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',key);cards.forEach(c=>{c.button.remove();c.texture.dispose();c.mesh.material.dispose();});geo.dispose();gridGeo.dispose();gridMat.dispose();renderer.dispose();renderer.domElement.remove();};
  },[onOpen]);
- return <div className="gallery" ref={host} aria-label="作品ギャラリー。スクロール、ドラッグ、左右矢印キーで移動">{failed&&projects.map((p,i)=><button key={p.id} className="mobile-card" onClick={()=>onOpen(i)}><img src={p.image} alt={p.title}/></button>)}</div>;
+ return <div className="gallery" ref={host} aria-label="作品ギャラリー。スクロール、ドラッグ、左右矢印キーで移動">{!failed&&[-1,1].map(dir=><button key={dir} className={'gallery-arrow '+(dir<0?'prev':'next')} aria-label={dir<0?'前の作品':'次の作品'} onPointerDown={e=>e.stopPropagation()} onClick={()=>step.current?.(dir)}>{dir<0?'←':'→'}</button>)}{failed&&projects.map((p,i)=><button key={p.id} className="mobile-card" onClick={()=>onOpen(i)}><img src={p.image} alt={p.title}/></button>)}</div>;
 }
 export function Portal(){
  const host=useRef(null);
