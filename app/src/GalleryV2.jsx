@@ -36,9 +36,33 @@ vec3 cardSurface(vec3 basePoint, vec2 uv){
  }
  return p;
 }`;
+// One spotlight shared by cards and floor: the aim point is fixed at the
+// centre of the stage while the source drifts, so the pool breathes in place.
+const spotGLSL=`
+uniform vec3 lightPos, lightTarget;
+uniform float lightIntensity;
+// Elliptical cone in light space so the pool matches the card's landscape shape.
+float spotRadius(vec3 p,vec2 size){
+ vec3 a=normalize(lightTarget-lightPos),r=normalize(cross(a,vec3(0.,1.,0.))),u=cross(r,a),d=p-lightPos;
+ return length(vec2(dot(d,r),dot(d,u))/(dot(d,a)*size));
+}
+float spotCone(vec3 p){
+ float r=spotRadius(p,vec2(.32,.225));
+ return (1.-smoothstep(.62,1.04,r))*(1.12-.22*r*r);
+}`;
 const vertex=`varying vec2 vUv;varying vec3 vFlat;${surfaceGLSL}
 void main(){vUv=uv;vFlat=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*vec4(cardSurface(vFlat,uv),1.);}`;
-const fragment=`uniform sampler2D map;varying vec2 vUv;varying vec3 vFlat;${surfaceGLSL}
+const floorVertex=`varying vec3 vWorld;void main(){vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`;
+const floorFragment=`varying vec3 vWorld;${spotGLSL}
+void main(){
+ float fog=1.-smoothstep(11.,32.,distance(cameraPosition,vWorld));
+ float lit=.06+.94*(1.-smoothstep(.35,1.,spotRadius(vWorld,vec2(.36,.36))))*lightIntensity;
+ gl_FragColor=vec4(vec3(.42)*lit*fog,1.);
+}`;
+// Smooth 1D gradient noise; layered octaves give the light an unhurried, hand-held drift.
+function noise1(x){const i=Math.floor(x),f=x-i,g=n=>{const h=Math.sin(n*127.1+311.7)*43758.5453;return (h-Math.floor(h))*2-1;},u=f*f*(3-2*f);return (g(i)*f*(1-u)+g(i+1)*(f-1)*u)*2;}
+function drift(t,seed){return noise1(t+seed)*.65+noise1(t*2.1+seed*3.7)*.25+noise1(t*4.3+seed*7.1)*.1;}
+const fragment=`uniform sampler2D map;varying vec2 vUv;varying vec3 vFlat;${surfaceGLSL}${spotGLSL}
 void main(){
  vec2 q=abs(vUv-.5)-vec2(.478,.467);
  float d=length(max(q,0.))+min(max(q.x,q.y),0.)-.022;
@@ -49,9 +73,11 @@ void main(){
  vec3 ty=cardSurface(vFlat+vec3(0.,e,0.),vUv+vec2(0.,e/3.33))-cardSurface(vFlat-vec3(0.,e,0.),vUv-vec2(0.,e/3.33));
  vec3 n=normalize(cross(tx,ty));
  vec3 p=cardSurface(vFlat,vUv),v=normalize(cameraPosition-p);
- vec3 light=normalize(vec3(-.42,.55,1.));
- float diffuse=.5+.5*dot(n,light);
- float sheen=pow(max(dot(n,normalize(light+v)),0.),48.);
+ vec3 light=normalize(lightPos-p);
+ if(dot(n,v)<0.)n=-n;
+ float diffuse=.55+.45*max(dot(n,light),0.);
+ float spot=spotCone(p)*lightIntensity;
+ float sheen=pow(max(dot(n,normalize(light+v)),0.),48.)*spot;
  float depth=.5-.5*cos((vFlat.x+1.4)*.62);
  vec2 localDelta=(vUv-touchPoint)*vec2(1.7,1.);
  float influence=exp(-dot(localDelta,localDelta)*18.);
@@ -59,8 +85,8 @@ void main(){
  // Keep the caption stable while the artwork follows the pointer's wake.
  vec2 sampleUV=clamp(vUv-flow*.023*influence*edgeFade*smoothstep(.10,.28,vUv.y),.001,.999);
  vec3 color=texture2D(map,sampleUV).rgb;
- color*=1.-.10*(1.-diffuse);
- color=mix(color,vec3(.018),.30*depth);
+ color*=.004+spot*diffuse;
+ color=mix(color,vec3(.006),.30*depth);
  color+=vec3(.19)*sheen;
  gl_FragColor=vec4(color,1.);
  #include <tonemapping_fragment>
@@ -80,12 +106,13 @@ export function Gallery({onOpen,paused}){
   const el=host.current;let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:true});}catch{setFailed(true);return;}
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0);el.prepend(renderer.domElement);
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(.6,.04,12);
+  const lightBase=new THREE.Vector3(-.4,5.2,8.6),spotUniforms={lightPos:{value:lightBase.clone()},lightTarget:{value:new THREE.Vector3(0,0,.24)},lightIntensity:{value:1}};
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,gap=5.78,width=5.65,height=3.33,total=gap*projects.length,geo=new THREE.PlaneGeometry(width,height,96,48),cards=[];
   let frame,stopped=false,current=gap,target=gap,down=false,lastX=0,startX=0,distance=0,lastAction=0,previous=0,hover=-1,pendingOpen=null;
   [...projects,...projects].forEach((p,j)=>{const i=j%projects.length,copy=Math.floor(j/projects.length);
    const canvas=document.createElement('canvas');canvas.width=1120;canvas.height=660;const ctx=canvas.getContext('2d'),img=new Image();img.src=p.image;const detail=new Image();detail.src=p.detailImage||p.image;
    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-   const material=new THREE.ShaderMaterial({uniforms:{map:{value:texture},speed:{value:0},hoverAmount:{value:0},pulseAge:{value:-1},pulseOrigin:{value:new THREE.Vector2(.5,.5)},touchPoint:{value:new THREE.Vector2(.5,.5)},flow:{value:new THREE.Vector2()}},vertexShader:vertex,fragmentShader:fragment,side:THREE.DoubleSide}),mesh=new THREE.Mesh(geo,material);scene.add(mesh);
+   const material=new THREE.ShaderMaterial({uniforms:{map:{value:texture},speed:{value:0},hoverAmount:{value:0},pulseAge:{value:-1},pulseOrigin:{value:new THREE.Vector2(.5,.5)},touchPoint:{value:new THREE.Vector2(.5,.5)},flow:{value:new THREE.Vector2()},...spotUniforms},vertexShader:vertex,fragmentShader:fragment,side:THREE.DoubleSide}),mesh=new THREE.Mesh(geo,material);scene.add(mesh);
    const button=document.createElement('button');button.className='canvas-project';button.setAttribute('aria-label',p.title+' — 作品を見る');button.addEventListener('click',e=>{if((e.detail===0||distance<7)&&!status.current.paused){if(pendingOpen)return;const box=button.getBoundingClientRect();if(e.detail===0||reduced){onOpen(i,box);return;}material.uniforms.pulseOrigin.value.set(Math.max(0,Math.min(1,(e.clientX-box.left)/box.width)),Math.max(0,Math.min(1,1-(e.clientY-box.top)/box.height)));material.uniforms.pulseAge.value=0;
      gsap.killTweensOf(material.uniforms.pulseAge);
      gsap.to(material.uniforms.pulseAge,{value:1.25,duration:1.25,ease:'none'});
@@ -102,13 +129,14 @@ export function Gallery({onOpen,paused}){
   });
   const pts=[];for(let a=-30;a<=30;a+=1)for(let z=10;z>-50;z-=.6)pts.push(...floorPoint(a,-height/2,z),...floorPoint(a,-height/2,z-.6));
   for(let z=10;z>-50;z-=1)for(let x=-30;x<30;x+=.25)pts.push(...floorPoint(x,-height/2,z),...floorPoint(x+.25,-height/2,z));
-  const gridGeo=new THREE.BufferGeometry();gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));const gridMat=new THREE.LineBasicMaterial({color:0x272727,transparent:true,opacity:.66});scene.add(new THREE.LineSegments(gridGeo,gridMat));scene.fog=new THREE.Fog(0,11,32);
+  const gridGeo=new THREE.BufferGeometry();gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));const gridMat=new THREE.ShaderMaterial({uniforms:spotUniforms,vertexShader:floorVertex,fragmentShader:floorFragment});scene.add(new THREE.LineSegments(gridGeo,gridMat));
   const resize=()=>{renderer.setSize(el.clientWidth,el.clientHeight);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix();};resize();const observer=new ResizeObserver(resize);observer.observe(el);
   const cancelOpen=()=>{pendingOpen?.kill();pendingOpen=null;};
   const wheel=e=>{if(status.current.paused)return;cancelOpen();e.preventDefault();target-=(Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY)*.0045;lastAction=performance.now();};
   const pointerdown=e=>{if(status.current.paused||e.button!==0)return;cancelOpen();down=true;startX=lastX=e.clientX;distance=0;el.classList.add('dragging');};const move=e=>{if(!down)return;target-=(e.clientX-lastX)*.016;lastX=e.clientX;distance=Math.abs(e.clientX-startX);lastAction=performance.now();};const up=()=>{down=false;el.classList.remove('dragging');};
   const key=e=>{if(e.key==='Escape')cancelOpen();if(status.current.paused||!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();target+=(e.key==='ArrowRight'?1:-1)*gap;lastAction=performance.now();};el.addEventListener('wheel',wheel,{passive:false});el.addEventListener('pointerdown',pointerdown);window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('keydown',key);
   const pos=new THREE.Vector3();const tick=time=>{if(stopped)return;frame=requestAnimationFrame(tick);const dt=Math.min((time-previous)/1000||.016,.05);previous=time;if(document.hidden)return;const speed=target-current;current+=speed*(reduced?1:1-Math.exp(-8*dt));
+   if(!reduced){const t=time/1000*.16;spotUniforms.lightPos.value.set(lightBase.x+drift(t,1.3)*1.6,lightBase.y+drift(t,5.9)*.7,lightBase.z+drift(t,9.4)*.5);spotUniforms.lightIntensity.value=1+drift(t*1.7,13.2)*.07;}
    for(const c of cards){let x=((c.i*gap-current+total/2)%total+total)%total-total/2;if(c.copy)x+=x<0?total:-total;c.mesh.visible=Math.abs(x)<camera.aspect*3.8+width;c.button.hidden=!c.mesh.visible;if(!c.mesh.visible){c.button.style.display="none";continue;}c.mesh.position.x=x;c.mesh.rotation.y=0;c.mesh.material.uniforms.speed.value=reduced?0:Math.max(-2,Math.min(2,speed));const u=c.mesh.material.uniforms;if(time-c.lastPaint>40||c.lastHover!==(hover===c.i)){paint(c.ctx,c.img,c.detail,c.p,reduced?0:time/1000+c.i*3.7,hover===c.i);c.texture.needsUpdate=true;c.lastPaint=time;c.lastHover=hover===c.i;}const outline=[];for(let k=0;k<=16;k++){pos.set(...surface(x-width/2+width*k/16,height/2,0,reduced?0:speed)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}for(let k=16;k>=0;k--){pos.set(...surface(x-width/2+width*k/16,-height/2,0,reduced?0:speed)).project(camera);outline.push([(pos.x*.5+.5)*el.clientWidth,(-pos.y*.5+.5)*el.clientHeight]);}const left=Math.min(...outline.map(p=>p[0])),top=Math.min(...outline.map(p=>p[1])),pw=Math.max(...outline.map(p=>p[0]))-left,ph=Math.max(...outline.map(p=>p[1]))-top;c.button.style.cssText=`width:${pw}px;height:${ph}px;transform:translate3d(${left}px,${top}px,0);clip-path:polygon(${outline.map(p=>`${(p[0]-left)/pw*100}% ${(p[1]-top)/ph*100}%`).join(",")})`;c.button.tabIndex=Math.abs(x)<gap*.6?0:-1;}renderer.render(scene,camera);};frame=requestAnimationFrame(tick);
   return()=>{stopped=true;cancelOpen();cancelAnimationFrame(frame);observer.disconnect();el.removeEventListener('wheel',wheel);el.removeEventListener('pointerdown',pointerdown);window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',key);cards.forEach(c=>{const u=c.mesh.material.uniforms;[u.hoverAmount,u.pulseAge,u.touchPoint.value,u.flow.value].forEach(v=>gsap.killTweensOf(v));c.button.remove();c.texture.dispose();c.mesh.material.dispose();});geo.dispose();gridGeo.dispose();gridMat.dispose();renderer.dispose();renderer.domElement.remove();};
  },[onOpen]);
